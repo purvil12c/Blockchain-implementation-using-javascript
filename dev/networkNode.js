@@ -69,15 +69,63 @@ app.get('/mine', function(req, res){
   const nonce = bitcoin.proofOfWork(prevBlockHash, currentBlockData)
   const currentBlockHash = bitcoin.hashBlock(prevBlockHash, currentBlockData, nonce);
 
-  bitcoin.createNewTransaction(12.5, "00", nodeAddress); //reward the miner
-
   const newBlock = bitcoin.createNewBlock(nonce, prevBlockHash, currentBlockHash);
+  const broadcastPromises = [];
+  //broadcast newBlock to all nodes
+  bitcoin.networkNodes.forEach(networkNode => {
+    const requestOptions = {
+      url: networkNode+'/receive-new-block',
+      body: newBlock,
+      method: 'POST',
+      json: true
+    };
+    broadcastPromises.push(rp(requestOptions));
+  });
 
-  res.json({info: 'new block mined successfully', block: newBlock});
+  Promise.all(broadcastPromises)
+    .then(data => {
+      const requestOptions = {
+        url: bitcoin.currentNodeUrl+'/transaction/broadcast',
+        method: 'POST',
+        body: {
+          amount: 12.5,
+          sender: '00',
+          receiver: nodeAddress
+        },
+        json: true
+      };
+      return rp(requestOptions);
+    })
+    .then(data => {
+      res.json({info: 'new block mined successfully and broadcasted', block: newBlock});
+    })
+    .catch(err => {
+      res.send(err);
+    })
 });
 
 //receive new block
 app.post('/receive-new-block', function(req, res){
+  const newBlock = req.body;
+  //we now verify the newly received block
+
+  //first check if previous hash of this node's blockchain matches the incoming new block's prev hash
+  const lastBlock = bitcoin.getLastBlock();
+  const correctPreviousHash = lastBlock.hash == newBlock.previousBlockHash;
+
+  //check for the index property
+  const correctIndex = (lastBlock.index + 1) == newBlock.index;
+
+  //if new block is legitimate
+  if (correctPreviousHash && correctIndex){
+    bitcoin.chain.push(newBlock);
+    bitcoin.pendingTransactions = [];
+    res.json({info: 'new block received and expected', newBlock: newBlock});
+  }
+  else{
+    //if not legitimate
+    res.json({info: 'new block rejected', newBlock: newBlock});
+  }
 
 });
 
