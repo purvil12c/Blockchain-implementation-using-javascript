@@ -1,8 +1,13 @@
 const sha256 = require('sha256');
+const currentNodeUrl = process.argv[3];
+const uuid = require('uuid/v1');
 
 function Blockchain(){
   this.chain = []; //Chain array will contain the blocks
   this.pendingTransactions = []; //pending transactions until mined will be kept in this array. They are pending transactions.
+
+  this.currentNodeUrl = currentNodeUrl;
+  this.networkNodes = [];
 
   this.createNewBlock(0, '0', '0'); //This is the Genisis Block
 }
@@ -31,15 +36,21 @@ Blockchain.prototype.getGenesisBlock = function(){
   return this.chain[0];
 }
 
+//simple create the transaction object
 Blockchain.prototype.createNewTransaction = function(amount, sender, receiver){
   const newTransaction = {
+    transactionId: uuid().split('-').join(''),
     amount: amount, //amount of the transaction
     sender: sender, //sender/sender address
     receiver: receiver //receiver/receiver address
   };
+  return newTransaction;
+}
 
-  this.pendingTransactions.push(newTransaction);
-  return this.getLastBlock()['index'] + 1; //We return the number of the block to which this new transaction will be added to
+//Add incoming transaction to pending transactions
+Blockchain.prototype.addTransactionToPendingTransactions = function(transaction){
+  this.pendingTransactions.push(transaction);
+  return this.getLastBlock()['index']+1;
 }
 
 Blockchain.prototype.hashBlock = function(previousBlockHash, currentBlockData, nonce){
