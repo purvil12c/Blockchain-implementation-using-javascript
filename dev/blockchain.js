@@ -91,5 +91,57 @@ Blockchain.prototype.chainIsValid = function(blockchain){
   return true;
 }
 
+Blockchain.prototype.searchBlockByHash = function(searchHash){
+  var chainOfBlocks = this.chain;
+  var flag=0
+  for(var i = 0;i<chainOfBlocks.length;i++){
 
+    if(chainOfBlocks[i].hash==searchHash) return chainOfBlocks[i];
+
+  }
+  return null;
+}
+
+Blockchain.prototype.searchTransactionById = function(transactionId){
+  var chainOfBlocks = this.chain;
+  var flag=0
+  for(var i = 0;i<chainOfBlocks.length;i++){
+    if(chainOfBlocks[i].transactions){
+      for(var j = 0;j<chainOfBlocks[i].transactions.length;j++){
+        if(chainOfBlocks[i].transactions[j].transactionId==transactionId) return chainOfBlocks[i].transactions[j];
+      }
+    }
+  }
+  return null;
+}
+
+Blockchain.prototype.getAddressData = function(address){
+  var chainOfBlocks = this.chain;
+  var transactionsAddress = [];
+
+  for(var i = 0;i<chainOfBlocks.length;i++){
+    if(chainOfBlocks[i].transactions){
+      for(var j = 0;j<chainOfBlocks[i].transactions.length;j++){
+        if(chainOfBlocks[i].transactions[j].sender==address || chainOfBlocks[i].transactions[j].receiver==address )
+          transactionsAddress.push(chainOfBlocks[i].transactions[j]);
+      }
+    }
+  }
+
+  var addressBalance = 0;
+
+  transactionsAddress.forEach(transaction => {
+    if(transaction.sender == address)
+      addressBalance-=transaction.amount;
+    else
+      if(transaction.receiver == address)
+        addressBalance+=transaction.amount;
+  });
+
+  return {
+    addressTransactions: transactionsAddress,
+    balance: addressBalance
+  };
+
+}
 module.exports = Blockchain;

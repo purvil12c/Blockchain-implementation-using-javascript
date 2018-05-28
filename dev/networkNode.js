@@ -241,6 +241,36 @@ app.get('/consensus', function(req, res){
 
 });
 
+//search block by hash
+app.get("/block/:blockhash", function(req, res){
+  var searchHash = req.params.blockhash;
+  var block = bitcoin.searchBlockByHash(searchHash);
+  if(block!=null){
+    return res.json(block);
+  }
+  else{
+    return res.send("No block with hash: "+searchHash+" found.");
+  }
+});
+
+//search transaction by transactionid
+app.get("/transaction/:transactionId", function(req, res){
+  var transactionId = req.params.transactionId;
+  var transaction = bitcoin.searchTransactionById(transactionId);
+  if(transaction!=null){
+    return res.json(transaction);
+  }
+  else{
+    return res.send("No transaction with transactionId: "+transactionId+" found.");
+  }
+});
+
+//search wallet address from address
+app.get("/address/:address", function(req, res){
+  var address = req.params.address;
+  var data = bitcoin.getAddressData(address);
+  res.json(data);
+});
 
 app.listen(port, function(err){
   if(err)
