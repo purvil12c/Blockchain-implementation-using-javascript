@@ -186,6 +186,60 @@ app.post('/register-nodes-bulk', function(req,res){
   res.json({'info': 'nodes in bulk successfully registered'})
 });
 
+//concensus
+app.get('/consensus', function(req, res){
+  //first retrive blockchain objects from all nodes on the network
+  const promiseArray = [];
+  bitcoin.networkNodes.forEach(networkNode => {
+    const requestOptions = {
+      url: networkNode+'/blockchain',
+      method: 'GET',
+      json: true
+    }
+    promiseArray.push(rp(requestOptions));
+  });
+
+  Promise.all(promiseArray)
+    .then(blockchains => {
+      console.log(blockchains);
+      const currentChainLength = bitcoin.chain.length;
+      let maxChainLength = currentChainLength;
+      let newLongestChain = null;
+      let newPendingTransactions = null;
+
+      blockchains.forEach(blockchain => {
+        //check for longer chain
+        if(maxChainLength<blockchain.chain.length){
+          maxChainLength = blockchain.chain.length;
+          newLongestChain = blockchain.chain;
+          newPendingTransactions = blockchain.pendingTransactions;
+        }
+      });
+
+      if(!newLongestChain || (newLongestChain && !bitcoin.chainIsValid(newLongestChain))){
+        res.json({
+          info: 'current chain has not been replaced',
+          chain: bitcoin.chain
+        });
+      }
+      else{
+        if(newLongestChain && bitcoin.chainIsValid(newLongestChain)){
+          //replace current node chain with new longest chain
+          bitcoin.chain = newLongestChain;
+          bitcoin.pendingTransactions = newPendingTransactions;
+          res.json({
+            info: 'current chain has been replaced',
+            chain: bitcoin.chain
+          });
+        }
+      }
+
+    })
+    .catch(err => {
+      res.send(err);
+    })
+
+});
 
 
 app.listen(port, function(err){
